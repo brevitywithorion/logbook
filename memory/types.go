@@ -67,6 +67,8 @@ const (
 	ChannelREST  Channel = "rest"
 	ChannelCLI   Channel = "cli"
 	ChannelAdmin Channel = "admin"
+	// ChannelJob marks changes made by logbook's own background jobs.
+	ChannelJob Channel = "job"
 )
 
 // EdgeType names the relation an edge records.
@@ -154,6 +156,15 @@ type Event struct {
 	Actor    Author          `json:"actor"`
 	At       time.Time       `json:"at"`
 	Detail   json.RawMessage `json:"detail,omitempty"`
+}
+
+// Candidate is one fact an extractor pulled out of raw text.
+type Candidate struct {
+	Content string `json:"content"`
+	Kind    Kind   `json:"kind"`
+	Subject string `json:"subject,omitempty"`
+	// Evidence is the sentence the fact came from.
+	Evidence string `json:"evidence,omitempty"`
 }
 
 // Hit is a search result before ranking rules are applied.

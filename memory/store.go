@@ -19,6 +19,10 @@ type Filter struct {
 	OrgID string
 	// Scopes are full scope strings. An empty list matches nothing.
 	Scopes []string
+	// AllScopes ignores Scopes and matches every scope. Only background jobs set it.
+	AllScopes bool
+	// ForgottenBefore keeps forgotten memories that are not purged yet and were forgotten at or before it.
+	ForgottenBefore time.Time
 	// Statuses empty means every status except forgotten.
 	Statuses []Status
 	Kinds    []Kind
@@ -36,6 +40,25 @@ type Filter struct {
 	Now    time.Time
 	Limit  int
 	Cursor string
+}
+
+// EmbeddingStore keeps one vector per memory and model key. A Store that also
+// implements it, in and out of transactions, lets a Service use embeddings.
+type EmbeddingStore interface {
+	// PutEmbedding stores v for the memory and model, replacing an earlier one.
+	PutEmbedding(ctx context.Context, orgID, id, model string, v []float32) error
+	// DeleteEmbeddings removes every vector of the memory.
+	DeleteEmbeddings(ctx context.Context, orgID, id string) error
+	// Embeddings calls fn for every vector of model whose memory is not
+	// forgotten, or only those stored at or after since when it is set.
+	Embeddings(ctx context.Context, orgID, model string, since time.Time, fn func(id, scope string, v []float32) error) error
+	// MissingEmbeddings returns up to limit memories that are not forgotten and
+	// have no vector for model, in id order (oldest first for ULIDs), starting
+	// after afterID when it is set.
+	MissingEmbeddings(ctx context.Context, orgID, model, afterID string, limit int) ([]*Memory, error)
+	// DropEmbeddings deletes every vector whose model is not keep, or every
+	// vector when keep is empty, and returns how many it deleted.
+	DropEmbeddings(ctx context.Context, orgID, keep string) (int, error)
 }
 
 // Store is the storage a Service runs on. Backends implement it and prove it
